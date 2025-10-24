@@ -1,6 +1,6 @@
 <!--
   CryptoBadger - Text Encryption Tool
-  Version: 1.0 (Crypto)
+  Version: 1.1 (WhatsApp-Optimiert)
   Author: Selahattin Erkoc (https://github.com/habanada)
   Year: 2025
 
@@ -179,7 +179,7 @@
             </div>
 
             <!-- Sektion 2: Steuerung -->
-            <div class="card bg-white p-6 rounded-2xl shadow-lg flex flex-col gap-6">
+            <div class="card bg-white p-6 rounded-2xl shadow-lg flex flex-col gap-6 relative">
                 
                 <!-- Passwort -->
                 <div>
@@ -222,15 +222,15 @@
                         </svg>
                         <span id="uiDecryptBtn">Entschlüsseln</span>
                     </button>
-                    
-                    <!-- Loading Spinner -->
-                    <div id="loading-spinner" class="hidden absolute inset-0 bg-white/50 dark:bg-black/50 items-center justify-center">
-                        <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span id="uiLoading" class="ml-3 card-label">Arbeite...</span>
-                    </div>
+                </div>
+                
+                <!-- Loading Spinner (im Aktionen-Container) -->
+                <div id="loading-spinner" class="hidden absolute inset-0 bg-white/50 dark:bg-gray-800/50 items-center justify-center rounded-2xl">
+                    <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span id="uiLoading" class="ml-3 card-label">Arbeite...</span>
                 </div>
 
             </div>
@@ -262,6 +262,8 @@
                 btn_decrypt: "Entschlüsseln",
                 loading: "Arbeite...",
                 toast_copied: "In Zwischenablage kopiert!",
+                toast_auto_copied: "Automatisch kopiert!",
+                toast_auto_pasted: "Text aus Zwischenablage eingefügt!",
                 toast_cleared: "Alle Felder gelöscht.",
                 toast_nocopy: "Nichts zu kopieren.",
                 toast_no_pass: "Passwort fehlt.",
@@ -299,6 +301,8 @@
                 btn_decrypt: "Decrypt",
                 loading: "Working...",
                 toast_copied: "Copied to clipboard!",
+                toast_auto_copied: "Auto-copied!",
+                toast_auto_pasted: "Pasted from clipboard!",
                 toast_cleared: "All fields cleared.",
                 toast_nocopy: "Nothing to copy.",
                 toast_no_pass: "Password missing.",
@@ -521,6 +525,39 @@
                 }
             }
 
+            // --- Hilfsfunktion: Auto-Kopieren ---
+            function autoCopy(text, messageKey) {
+                if (!text) return;
+                try {
+                    // Verwende document.execCommand für iFrame-Kompatibilität
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = text;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    showToast(messageKey);
+                } catch (err) {
+                    console.warn("Auto-copy failed:", err);
+                    // Manuelles Kopieren als Fallback
+                    copyBtn.click();
+                }
+            }
+            
+            // --- Hilfsfunktion: Ist verschlüsselt? ---
+            function isCiphertext(text) {
+                return text.startsWith('AES1:') || text.startsWith('CHACHA1:') || text.startsWith('XOR1:');
+            }
+            
+            // --- Hilfsfunktion: Auto-Entschlüsseln ---
+            async function tryAutoDecrypt() {
+                if (isCiphertext(textInput.value) && passwordInput.value) {
+                    // Warte einen Moment, damit der eingefügte Text sichtbar ist
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    decryptBtn.click();
+                }
+            }
+
             // --- Haupt-Logik: Verschlüsseln ---
             encryptBtn.addEventListener('click', async () => {
                 const text = textInput.value;
@@ -550,6 +587,10 @@
                         result = cryptoLib.xorCrypt(text, password);
                     }
                     textOutput.value = result;
+                    
+                    // NEU: Auto-Copy nach Verschlüsselung
+                    autoCopy(result, 'toast_auto_copied');
+                    
                 } catch (e) {
                     console.error("Encryption failed:", e);
                     showToast('toast_encrypt_fail', 'error');
@@ -605,16 +646,7 @@
                     showToast('toast_nocopy', 'error');
                     return;
                 }
-                
-                try {
-                    // Verwende document.execCommand, da navigator.clipboard in iFrames (wie der Vorschau) oft blockiert ist.
-                    textOutput.select();
-                    document.execCommand('copy');
-                    showToast('toast_copied');
-                    window.getSelection().removeAllRanges(); // Auswahl aufheben
-                } catch (err) {
-                    showToast('toast_copyfail', 'error');
-                }
+                autoCopy(textToCopy, 'toast_copied');
             });
 
             clearBtn.addEventListener('click', () => {
@@ -622,6 +654,42 @@
                 textOutput.value = '';
                 passwordInput.value = '';
                 showToast('toast_cleared');
+            });
+
+            // --- NEU: WhatsApp-Optimierungen ---
+
+            // 1. Auto-Detect beim Einfügen (Paste)
+            textInput.addEventListener('paste', (e) => {
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                if (isCiphertext(pastedText)) {
+                    // Auto-Entschlüsselung wird durch 'input'-Event getriggert
+                }
+            });
+            
+            // 2. Auto-Entschlüsselung nach dem Einfügen
+            textInput.addEventListener('input', () => {
+                tryAutoDecrypt();
+            });
+            
+            // 3. Auto-Detect beim Zurückwechseln zur App (Focus)
+            window.addEventListener('focus', async () => {
+                try {
+                    // Prüfe, ob die Berechtigung schon erteilt wurde (oder 'prompt' ist)
+                    const state = (await navigator.permissions.query({ name: 'clipboard-read' })).state;
+                    if (state === 'denied') return;
+
+                    const clipboardText = await navigator.clipboard.readText();
+                    
+                    // Füge nur ein, wenn es verschlüsselter Text ist UND sich vom aktuellen Text unterscheidet
+                    if (isCiphertext(clipboardText) && textInput.value !== clipboardText) {
+                        textInput.value = clipboardText;
+                        showToast('toast_auto_pasted');
+                        tryAutoDecrypt();
+                    }
+                } catch (err) {
+                    // Konsole-Warnung, wenn Zwischenablage-Zugriff fehlschlägt (z.B. Firefox-Sicherheit)
+                    console.warn("Clipboard read on focus failed:", err.message);
+                }
             });
 
             // --- UI-Management (Sprache, Theme, Algo-Auswahl) ---
