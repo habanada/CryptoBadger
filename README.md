@@ -117,7 +117,7 @@ You must:
 
 * Give attribution:
  **"CryptoBadger by Selahattin Erkoc"**
- (based on *Base64Badger UI*)
+ (based on *CryptoBadger UI*)
 
 Commercial use requires **explicit permission** from the author.
 
