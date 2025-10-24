@@ -1,0 +1,736 @@
+<!--
+  CryptoBadger - Text Encryption Tool
+  Version: 1.0 (Crypto)
+  Author: Selahattin Erkoc (https://github.com/habanada)
+  Year: 2025
+
+  License: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+  https://creativecommons.org/licenses/by-nc/4.0/
+
+  You are free to use, share, and modify this software for non-commercial purposes only.
+  Commercial use requires explicit permission from the author.
+  Attribution is required: mention "CryptoBadger by Selahattin Erkoc" (based on Base64Badger UI).
+  
+  © 2025 Selahattin Erkoc. All rights reserved.
+-->
+<!DOCTYPE html>
+<html lang="de"> <!-- 'lang' wird per JS aktualisiert, 'dark' Klasse wird hier hinzugefügt -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoBadger</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(200%);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            visibility: hidden;
+            z-index: 1000;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            visibility: visible;
+        }
+
+        /* Light mode Standard */
+        body {
+            background-color: #F9FAFB; /* gray-50 */
+            color: #1F2937; /* gray-800 */
+        }
+        .card {
+            background-color: #FFFFFF;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .card-header, .card-label {
+            color: #111827; /* gray-900 */
+        }
+        .card-subheader, .card-hint, .card-placeholder {
+            color: #6B7280; /* gray-500 */
+        }
+        textarea, select, input {
+            background-color: #F3F4F6; /* gray-100 */
+            color: #1F2937; /* gray-800 */
+            border-color: #D1D5DB; /* gray-300 */
+        }
+        select {
+             /* Light mode: Pfeil hinzufügen */
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            padding-right: 2.5rem;
+        }
+        .btn-secondary {
+            background-color: #4B5563; /* gray-600 */
+            color: #FFFFFF;
+        }
+        .btn-secondary:hover {
+            background-color: #374151; /* gray-700 */
+        }
+
+        /* Dark mode Überschreibungen */
+        .dark body {
+            background-color: #111827; /* gray-900 */
+            color: #E5E7EB; /* gray-200 */
+        }
+        .dark .card {
+            background-color: #1F2937; /* gray-800 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .dark .card-header, .dark .card-label {
+            color: #FFFFFF;
+        }
+        .dark .card-subheader, .dark .card-hint, .dark .card-placeholder {
+            color: #9CA3AF; /* gray-400 */
+        }
+        .dark textarea, .dark select, .dark input {
+            background-color: #374151; /* gray-700 */
+            color: #E5E7EB; /* gray-200 */
+            border-color: #4B5563; /* gray-600 */
+        }
+        .dark select {
+             /* Dark mode: Pfeil anpassen */
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239CA3AF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        }
+        .dark .btn-secondary {
+            background-color: #4B5563; /* gray-600 */
+        }
+        .dark .btn-secondary:hover {
+            background-color: #5E6A7B; /* gray-500 */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="max-w-6xl w-full mx-auto p-4 sm:p-8">
+        
+        <!-- Header: Sprache und Theme -->
+        <div class="flex justify-end items-center mb-4 px-4 gap-4">
+            <select id="uiLang" class="p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border" aria-label="Sprache auswählen">
+                <option value="de">🇩🇪 Deutsch</option>
+                <option value="en">🇬🇧 English</option>
+            </select>
+            <button id="theme-toggle-btn" class="p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 btn-secondary" aria-label="Dark/Light Mode umschalten">
+                <!-- Sun Icon (Light Mode) -->
+                <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 hidden">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-6.364-.386l1.591-1.591M3 12H.75m.386-6.364l1.591 1.591" />
+                </svg>
+                <!-- Moon Icon (Dark Mode) -->
+                <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 hidden">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                </svg>
+            </button>
+        </div>
+
+        <header class="text-center mb-10">
+            <!-- Logo-Platzhalter -->
+            <img src="CryptoBadger.png" alt="CryptoBadger Logo" class="mx-auto mb-4 w-24 h-24 rounded-lg">
+            
+            <h1 id="uiTitle" class="text-3xl sm:text-4xl font-bold card-header">CryptoBadger</h1>
+            <p id="uiSubtitle" class="card-subheader mt-2">Texte sicher verschlüsseln und entschlüsseln.</p>
+        </header>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            
+            <!-- Sektion 1: Eingabe & Ausgabe -->
+            <div class="card bg-white p-6 rounded-2xl shadow-lg flex flex-col gap-6">
+                
+                <!-- Eingabe -->
+                <div>
+                    <label id="uiLabelInput" for="text-input" class="block text-sm font-medium card-label mb-2">Text:</label>
+                    <textarea id="text-input" rows="5" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y" placeholder="Geheimtext hier einfügen..." aria-label="Eingabefeld für Text oder verschlüsselten Text"></textarea>
+                </div>
+                
+                <!-- Ausgabe -->
+                <div>
+                    <label id="uiLabelOutput" for="text-output" class="block text-sm font-medium card-label mb-2">Output:</label>
+                    <textarea id="text-output" rows="5" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y" readonly placeholder="Output erscheint hier..." aria-label="Ausgabefeld für das Ergebnis"></textarea>
+                </div>
+                
+                <!-- Utilities -->
+                <div class="flex gap-4">
+                    <button id="copy-btn" class="btn-secondary flex-1 px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 bg-green-600" aria-label="Output kopieren">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-3a2.25 2.25 0 01-2.25-2.25V5.25c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V7.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                        </svg>
+                        <span id="uiCopyBtnText">Kopieren</span>
+                    </button>
+                    <button id="clear-btn" class="btn-secondary flex-1 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2" aria-label="Alle Felder löschen">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12.578 0a48.108 48.108 0 013.478-.397m7.64 0L11.25 3.152a1.125 1.125 0 00-1.316-.385l-1.316.385a1.125 1.125 0 01-1.316-.385l-1.316.385A1.125 1.125 0 005.25 3.152l-1.316-.385m7.64 0l-3.376 6.891" />
+                        </svg>
+                        <span id="uiClearBtnText">Alles Löschen</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Sektion 2: Steuerung -->
+            <div class="card bg-white p-6 rounded-2xl shadow-lg flex flex-col gap-6">
+                
+                <!-- Passwort -->
+                <div>
+                    <label id="uiLabelPass" for="password" class="block text-sm font-medium card-label mb-2">Passwort:</label>
+                    <input type="password" id="password" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Dein geheimes Passwort" aria-label="Passwort-Eingabefeld">
+                    <p id="uiPassHint" class="card-hint text-xs mt-2">Ein starkes Passwort ist entscheidend für die Sicherheit.</p>
+                </div>
+
+                <!-- Algorithmus -->
+                <div>
+                    <label id="uiLabelAlgo" for="algorithm" class="block text-sm font-medium card-label mb-2">Algorithmus:</label>
+                    <select id="algorithm" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none" aria-label="Algorithmus auswählen">
+                        <option value="aes-gcm">AES-GCM (Extrem Sicher)</option>
+                        <option value="chacha20-poly1305">ChaCha20-Poly1305 (Extrem Sicher)</option>
+                        <option value="xor">Einfaches XOR (Unsicher)</option>
+                    </select>
+                </div>
+                
+                <!-- Schlüssellänge (Nur für AES) -->
+                <div id="keysize-container">
+                    <label id="uiLabelKeysize" for="keysize" class="block text-sm font-medium card-label mb-2">Schlüssellänge (für AES):</label>
+                    <select id="keysize" class="w-full p-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none" aria-label="AES-Schlüssellänge auswählen">
+                        <option value="256">256-bit (Stärkste)</option>
+                        <option value="192">192-bit</option>
+                        <option value="128">128-bit</option>
+                    </select>
+                </div>
+                
+                <!-- Aktionen -->
+                <div class="flex gap-4 mt-auto pt-4">
+                    <button id="encrypt-btn" class="flex-1 bg-blue-600 text-white px-5 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2" aria-label="Text verschlüsseln">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                        <span id="uiEncryptBtn">Verschlüsseln</span>
+                    </button>
+                    <button id="decrypt-btn" class="flex-1 bg-green-600 text-white px-5 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2" aria-label="Text entschlüsseln">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                        <span id="uiDecryptBtn">Entschlüsseln</span>
+                    </button>
+                    
+                    <!-- Loading Spinner -->
+                    <div id="loading-spinner" class="hidden absolute inset-0 bg-white/50 dark:bg-black/50 items-center justify-center">
+                        <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="uiLoading" class="ml-3 card-label">Arbeite...</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="py-2 px-5 rounded-lg shadow-lg text-white">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        // ==== Sprachdaten (Embedded) ====
+        const EMBEDDED_STRINGS = {
+            de: {
+                subtitle: "Texte sicher verschlüsseln und entschlüsseln.",
+                label_input: "Text:",
+                ph_input: "Geheimtext hier einfügen...",
+                label_output: "Output:",
+                ph_output: "Output erscheint hier...",
+                btn_copy: "Kopieren",
+                btn_clear: "Alles Löschen",
+                label_pass: "Passwort:",
+                ph_pass: "Dein geheimes Passwort",
+                pass_hint: "Ein starkes Passwort ist entscheidend für die Sicherheit.",
+                label_algo: "Algorithmus:",
+                label_keysize: "Schlüssellänge (für AES):",
+                btn_encrypt: "Verschlüsseln",
+                btn_decrypt: "Entschlüsseln",
+                loading: "Arbeite...",
+                toast_copied: "In Zwischenablage kopiert!",
+                toast_cleared: "Alle Felder gelöscht.",
+                toast_nocopy: "Nichts zu kopieren.",
+                toast_no_pass: "Passwort fehlt.",
+                toast_no_text: "Text fehlt.",
+                toast_encrypt_fail: "Verschlüsselung fehlgeschlagen.",
+                toast_decrypt_fail: "Entschlüsselung fehlgeschlagen. Falsches Passwort oder beschädigter Text?",
+                toast_no_crypto: "Web Crypto API nicht unterstützt. Unsicherer Modus.",
+                // A11y
+                aria_lang: "Sprache auswählen",
+                aria_theme: "Dark/Light Mode umschalten",
+                aria_input_field: "Eingabefeld für Text oder verschlüsselten Text",
+                aria_output_field: "Ausgabefeld für das Ergebnis",
+                aria_copy_btn: "Output kopieren",
+                aria_clear_btn: "Alle Felder löschen",
+                aria_pass_field: "Passwort-Eingabefeld",
+                aria_algo_select: "Algorithmus auswählen",
+                aria_keysize_select: "AES-Schlüssellänge auswählen",
+                aria_encrypt_btn: "Text verschlüsseln",
+                aria_decrypt_btn: "Text entschlüsseln"
+            },
+            en: {
+                subtitle: "Securely encrypt and decrypt text.",
+                label_input: "Text:",
+                ph_input: "Paste secret text here...",
+                label_output: "Output:",
+                ph_output: "Output appears here...",
+                btn_copy: "Copy",
+                btn_clear: "Clear All",
+                label_pass: "Password:",
+                ph_pass: "Your secret password",
+                pass_hint: "A strong password is crucial for security.",
+                label_algo: "Algorithm:",
+                label_keysize: "Key Size (for AES):",
+                btn_encrypt: "Encrypt",
+                btn_decrypt: "Decrypt",
+                loading: "Working...",
+                toast_copied: "Copied to clipboard!",
+                toast_cleared: "All fields cleared.",
+                toast_nocopy: "Nothing to copy.",
+                toast_no_pass: "Password missing.",
+                toast_no_text: "Text missing.",
+                toast_encrypt_fail: "Encryption failed.",
+                toast_decrypt_fail: "Decryption failed. Wrong password or corrupt text?",
+                toast_no_crypto: "Web Crypto API not supported. Insecure mode.",
+                // A11y
+                aria_lang: "Select language",
+                aria_theme: "Toggle Dark/Light Mode",
+                aria_input_field: "Input field for text or ciphertext",
+                aria_output_field: "Output field for the result",
+                aria_copy_btn: "Copy output",
+                aria_clear_btn: "Clear all fields",
+                aria_pass_field: "Password input field",
+                aria_algo_select: "Select algorithm",
+                aria_keysize_select: "Select AES key size",
+                aria_encrypt_btn: "Encrypt text",
+                aria_decrypt_btn: "Decrypt text"
+            }
+        };
+        let STRINGS = {};
+
+        // --- Hilfsfunktionen (Base64 <-> ArrayBuffer) ---
+        function bufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        function base64ToBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // --- Krypto-Kernfunktionen ---
+        const cryptoLib = {
+            // TextEncoder/Decoder Instanzen
+            encoder: new TextEncoder(),
+            decoder: new TextDecoder(),
+            
+            // PBKDF2 Schlüsselableitung
+            async getKey(password, salt, algoName, keyLength) {
+                const keyMaterial = await window.crypto.subtle.importKey(
+                    "raw",
+                    this.encoder.encode(password),
+                    "PBKDF2",
+                    false,
+                    ["deriveKey"]
+                );
+                return window.crypto.subtle.deriveKey(
+                    {
+                        name: "PBKDF2",
+                        salt: salt,
+                        iterations: 100000,
+                        hash: "SHA-256",
+                    },
+                    keyMaterial,
+                    { name: algoName, length: keyLength },
+                    true,
+                    ["encrypt", "decrypt"]
+                );
+            },
+            
+            // AES-GCM Verschlüsselung
+            async aesGcmEncrypt(text, password, keySize) {
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const key = await this.getKey(password, salt, "AES-GCM", keySize);
+                
+                const encryptedData = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    this.encoder.encode(text)
+                );
+                
+                // Format: AES1:[KeySize]:[Salt_b64]:[IV_b64]:[Data_b64]
+                return `AES1:${keySize}:${bufferToBase64(salt)}:${bufferToBase64(iv)}:${bufferToBase64(encryptedData)}`;
+            },
+
+            // AES-GCM Entschlüsselung
+            async aesGcmDecrypt(ciphertext, password) {
+                const parts = ciphertext.split(':');
+                if (parts[0] !== 'AES1' || parts.length !== 5) {
+                    throw new Error("Invalid format");
+                }
+                const keySize = parseInt(parts[1], 10);
+                const salt = base64ToBuffer(parts[2]);
+                const iv = base64ToBuffer(parts[3]);
+                const data = base64ToBuffer(parts[4]);
+
+                const key = await this.getKey(password, salt, "AES-GCM", keySize);
+                
+                const decryptedData = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    data
+                );
+                
+                return this.decoder.decode(decryptedData);
+            },
+            
+            // ChaCha20-Poly1305 Verschlüsselung
+            async chacha20Encrypt(text, password) {
+                const keySize = 256; // ChaCha20 verwendet 256-bit
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const iv = window.crypto.getRandomValues(new Uint8Array(12)); // Nonce
+                const key = await this.getKey(password, salt, "ChaCha20-Poly1305", keySize);
+
+                const encryptedData = await window.crypto.subtle.encrypt(
+                    { name: "ChaCha20-Poly1305", iv: iv },
+                    key,
+                    this.encoder.encode(text)
+                );
+                
+                // Format: CHACHA1:[Salt_b64]:[IV_b64]:[Data_b64]
+                return `CHACHA1:${bufferToBase64(salt)}:${bufferToBase64(iv)}:${bufferToBase64(encryptedData)}`;
+            },
+            
+            // ChaCha20-Poly1305 Entschlüsselung
+            async chacha20Decrypt(ciphertext, password) {
+                const parts = ciphertext.split(':');
+                if (parts[0] !== 'CHACHA1' || parts.length !== 4) {
+                    throw new Error("Invalid format");
+                }
+                const keySize = 256;
+                const salt = base64ToBuffer(parts[1]);
+                const iv = base64ToBuffer(parts[2]);
+                const data = base64ToBuffer(parts[3]);
+
+                const key = await this.getKey(password, salt, "ChaCha20-Poly1305", keySize);
+                
+                const decryptedData = await window.crypto.subtle.decrypt(
+                    { name: "ChaCha20-Poly1305", iv: iv },
+                    key,
+                    data
+                );
+                
+                return this.decoder.decode(decryptedData);
+            },
+
+            // Unsicheres XOR
+            xorCrypt(text, password) {
+                let result = '';
+                for (let i = 0; i < text.length; i++) {
+                    result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+                }
+                // Simples Format, um es von Klartext zu unterscheiden
+                if (text.startsWith('XOR1:')) {
+                    return result.substring(5); // Entschlüsseln
+                } else {
+                    return 'XOR1:' + result; // Verschlüsseln
+                }
+            }
+        };
+
+        // --- UI & Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // UI-Elemente
+            const textInput = document.getElementById('text-input');
+            const textOutput = document.getElementById('text-output');
+            const passwordInput = document.getElementById('password');
+            const algorithmSelect = document.getElementById('algorithm');
+            const keysizeSelect = document.getElementById('keysize');
+            const keysizeContainer = document.getElementById('keysize-container');
+            const encryptBtn = document.getElementById('encrypt-btn');
+            const decryptBtn = document.getElementById('decrypt-btn');
+            const copyBtn = document.getElementById('copy-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            const uiLangSelect = document.getElementById('uiLang');
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const themeIconSun = document.getElementById('theme-icon-sun');
+            const themeIconMoon = document.getElementById('theme-icon-moon');
+            
+            let toastTimeout;
+            
+            // --- Toast-Funktion ---
+            function showToast(messageKey, type = 'success') {
+                clearTimeout(toastTimeout);
+                toastMessage.textContent = STRINGS[messageKey] || messageKey; 
+                toast.className = 'py-2 px-5 rounded-lg shadow-lg text-white'; 
+                if (type === 'success') {
+                    toast.classList.add('bg-green-600');
+                } else {
+                    toast.classList.add('bg-red-600');
+                }
+                toast.classList.add('show');
+                
+                toastTimeout = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            }
+            
+            // --- Ladezustand UI ---
+            function setLoading(isLoading) {
+                if (isLoading) {
+                    loadingSpinner.classList.remove('hidden');
+                    loadingSpinner.classList.add('flex');
+                    encryptBtn.disabled = true;
+                    decryptBtn.disabled = true;
+                } else {
+                    loadingSpinner.classList.add('hidden');
+                    loadingSpinner.classList.remove('flex');
+                    encryptBtn.disabled = false;
+                    decryptBtn.disabled = false;
+                }
+            }
+
+            // --- Haupt-Logik: Verschlüsseln ---
+            encryptBtn.addEventListener('click', async () => {
+                const text = textInput.value;
+                const password = passwordInput.value;
+                const algorithm = algorithmSelect.value;
+                
+                if (!password) {
+                    showToast('toast_no_pass', 'error');
+                    return;
+                }
+                if (!text) {
+                    showToast('toast_no_text', 'error');
+                    return;
+                }
+                
+                setLoading(true);
+                textOutput.value = '';
+                
+                try {
+                    let result = '';
+                    if (algorithm === 'aes-gcm') {
+                        const keySize = parseInt(keysizeSelect.value, 10);
+                        result = await cryptoLib.aesGcmEncrypt(text, password, keySize);
+                    } else if (algorithm === 'chacha20-poly1305') {
+                        result = await cryptoLib.chacha20Encrypt(text, password);
+                    } else if (algorithm === 'xor') {
+                        result = cryptoLib.xorCrypt(text, password);
+                    }
+                    textOutput.value = result;
+                } catch (e) {
+                    console.error("Encryption failed:", e);
+                    showToast('toast_encrypt_fail', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            });
+            
+            // --- Haupt-Logik: Entschlüsseln ---
+            decryptBtn.addEventListener('click', async () => {
+                const ciphertext = textInput.value;
+                const password = passwordInput.value;
+                
+                if (!password) {
+                    showToast('toast_no_pass', 'error');
+                    return;
+                }
+                if (!ciphertext) {
+                    showToast('toast_no_text', 'error');
+                    return;
+                }
+
+                setLoading(true);
+                textOutput.value = '';
+                
+                try {
+                    let result = '';
+                    if (ciphertext.startsWith('AES1:')) {
+                        result = await cryptoLib.aesGcmDecrypt(ciphertext, password);
+                    } else if (ciphertext.startsWith('CHACHA1:')) {
+                        result = await cryptoLib.chacha20Decrypt(ciphertext, password);
+                    } else if (ciphertext.startsWith('XOR1:')) {
+                        result = cryptoLib.xorCrypt(ciphertext, password);
+                    } else {
+                        // Annahme: User versucht, einen Text zu entschlüsseln, der mit einem anderen Algo erstellt wurde
+                        showToast('toast_decrypt_fail', 'error');
+                        setLoading(false);
+                        return;
+                    }
+                    textOutput.value = result;
+                } catch (e) {
+                    console.error("Decryption failed:", e);
+                    showToast('toast_decrypt_fail', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            });
+
+            // --- Utility-Buttons ---
+            copyBtn.addEventListener('click', () => {
+                const textToCopy = textOutput.value;
+                if (!textToCopy) {
+                    showToast('toast_nocopy', 'error');
+                    return;
+                }
+                
+                try {
+                    // Verwende document.execCommand, da navigator.clipboard in iFrames (wie der Vorschau) oft blockiert ist.
+                    textOutput.select();
+                    document.execCommand('copy');
+                    showToast('toast_copied');
+                    window.getSelection().removeAllRanges(); // Auswahl aufheben
+                } catch (err) {
+                    showToast('toast_copyfail', 'error');
+                }
+            });
+
+            clearBtn.addEventListener('click', () => {
+                textInput.value = '';
+                textOutput.value = '';
+                passwordInput.value = '';
+                showToast('toast_cleared');
+            });
+
+            // --- UI-Management (Sprache, Theme, Algo-Auswahl) ---
+            
+            // Algo-Auswahl ändert Sichtbarkeit der Keysize
+            function updateAlgoUI() {
+                const selectedAlgo = algorithmSelect.value;
+                if (selectedAlgo === 'aes-gcm') {
+                    keysizeContainer.style.display = 'block';
+                } else {
+                    keysizeContainer.style.display = 'none';
+                }
+            }
+            algorithmSelect.addEventListener('change', updateAlgoUI);
+
+            // Sprache anwenden
+            function applyLanguage(lang) {
+                if (!EMBEDDED_STRINGS[lang]) lang = 'de';
+                STRINGS = EMBEDDED_STRINGS[lang];
+                
+                document.documentElement.lang = lang;
+                document.getElementById('uiSubtitle').textContent = STRINGS.subtitle;
+                document.getElementById('uiLabelInput').textContent = STRINGS.label_input;
+                document.getElementById('text-input').placeholder = STRINGS.ph_input;
+                document.getElementById('uiLabelOutput').textContent = STRINGS.label_output;
+                document.getElementById('text-output').placeholder = STRINGS.ph_output;
+                document.getElementById('uiCopyBtnText').textContent = STRINGS.btn_copy;
+                document.getElementById('uiClearBtnText').textContent = STRINGS.btn_clear;
+                document.getElementById('uiLabelPass').textContent = STRINGS.label_pass;
+                document.getElementById('password').placeholder = STRINGS.ph_pass;
+                document.getElementById('uiPassHint').textContent = STRINGS.pass_hint;
+                document.getElementById('uiLabelAlgo').textContent = STRINGS.label_algo;
+                document.getElementById('uiLabelKeysize').textContent = STRINGS.label_keysize;
+                document.getElementById('uiEncryptBtn').textContent = STRINGS.btn_encrypt;
+                document.getElementById('uiDecryptBtn').textContent = STRINGS.btn_decrypt;
+                document.getElementById('uiLoading').textContent = STRINGS.loading;
+                
+                // A11y
+                document.getElementById('uiLang').setAttribute('aria-label', STRINGS.aria_lang);
+                document.getElementById('theme-toggle-btn').setAttribute('aria-label', STRINGS.aria_theme);
+                document.getElementById('text-input').setAttribute('aria-label', STRINGS.aria_input_field);
+                document.getElementById('text-output').setAttribute('aria-label', STRINGS.aria_output_field);
+                document.getElementById('copy-btn').setAttribute('aria-label', STRINGS.aria_copy_btn);
+                document.getElementById('clear-btn').setAttribute('aria-label', STRINGS.aria_clear_btn);
+                document.getElementById('password').setAttribute('aria-label', STRINGS.aria_pass_field);
+                document.getElementById('algorithm').setAttribute('aria-label', STRINGS.aria_algo_select);
+                document.getElementById('keysize').setAttribute('aria-label', STRINGS.aria_keysize_select);
+                document.getElementById('encrypt-btn').setAttribute('aria-label', STRINGS.aria_encrypt_btn);
+                document.getElementById('decrypt-btn').setAttribute('aria-label', STRINGS.aria_decrypt_btn);
+            }
+
+            // Sprache initialisieren
+            function getInitialLang() {
+                const savedLang = localStorage.getItem('uiLang');
+                if (savedLang && EMBEDDED_STRINGS[savedLang]) return savedLang;
+                const browserLang = navigator.language.substring(0, 2);
+                return EMBEDDED_STRINGS[browserLang] ? browserLang : 'de';
+            }
+            const initialLang = getInitialLang();
+            uiLangSelect.value = initialLang;
+            applyLanguage(initialLang);
+            uiLangSelect.addEventListener('change', (e) => {
+                const newLang = e.target.value;
+                localStorage.setItem('uiLang', newLang);
+                applyLanguage(newLang);
+            });
+
+            // Theme anwenden
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    themeIconSun.classList.remove('hidden');
+                    themeIconMoon.classList.add('hidden');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    themeIconSun.classList.add('hidden');
+                    themeIconMoon.classList.remove('hidden');
+                }
+            }
+
+            // Theme initialisieren
+            function getInitialTheme() {
+                return localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            }
+            const initialTheme = getInitialTheme();
+            applyTheme(initialTheme);
+            themeToggleBtn.addEventListener('click', () => {
+                const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+                localStorage.setItem('theme', newTheme);
+                applyTheme(newTheme);
+            });
+            // Auf System-Theme-Änderungen hören
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('theme')) {
+                    applyTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+            
+            // Crypto-Check
+            if (!window.crypto || !window.crypto.subtle) {
+                showToast('toast_no_crypto', 'error');
+                algorithmSelect.value = 'xor';
+                algorithmSelect.disabled = true;
+            }
+            
+            // Initial-UI-Setup
+            updateAlgoUI();
+        });
+    </script>
+</body>
+</html>
+
